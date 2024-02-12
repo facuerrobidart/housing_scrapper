@@ -5,27 +5,32 @@ import yaml
 import sys
 from lib.notifier import Notifier
 from providers.processor import process_properties
+import asyncio
 
-# logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# configuration    
-with open("configuration.yml", 'r') as ymlfile:
-    cfg = yaml.safe_load(ymlfile)
+async def main():
+    # logging
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-disable_ssl = False
-if 'disable_ssl' in cfg:
-    disable_ssl = cfg['disable_ssl']
+    # configuration    
+    with open("configuration.yml", 'r') as ymlfile:
+        cfg = yaml.safe_load(ymlfile)
 
-notifier = Notifier.get_instance(cfg['notifier'], disable_ssl)
+    disable_ssl = False
+    if 'disable_ssl' in cfg:
+        disable_ssl = cfg['disable_ssl']
 
-new_properties = []
-for provider_name, provider_data in cfg['providers'].items():
-    try:
-        logging.info(f"Processing provider {provider_name}")
-        new_properties += process_properties(provider_name, provider_data)
-    except Exception as e:
-        logging.error(f"Error processing provider {provider_name}.\n{str(e)}")
+    notifier = Notifier.get_instance(cfg['notifier'], disable_ssl)
 
-if len(new_properties) > 0:
-    notifier.notify(new_properties)
+    new_properties = []
+    for provider_name, provider_data in cfg['providers'].items():
+        try:
+            logging.info(f"Processing provider {provider_name}")
+            new_properties += process_properties(provider_name, provider_data)
+        except Exception as e:
+            logging.error(f"Error processing provider {provider_name}.\n{str(e)}")
+
+    if len(new_properties) > 0:
+        await notifier.notify(new_properties)
+
+asyncio.run(main())
