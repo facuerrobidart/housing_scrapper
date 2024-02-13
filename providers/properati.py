@@ -4,13 +4,12 @@ from providers.base_provider import BaseProvider
 
 class Properati(BaseProvider):
     def props_in_source(self, source):
-        page_link = self.provider_data['base_url'] + source
         page = 1
-        total_pages = 1
+        page_link = self.provider_data['base_url'] + "/%s" % page + source
 
-        while True:
-            if page > total_pages:
-                break
+        print(page_link)
+
+        while page <= 4:
 
             logging.info("Requesting %s" % page_link)
             page_response = self.request(page_link)
@@ -19,30 +18,27 @@ class Properati(BaseProvider):
                 break
 
             page_content = BeautifulSoup(page_response.content, 'lxml')
-            properties = page_content.find_all('div', class_='item-description')
-
-            if page == 1:
-                nav_list = page_content.select('#page-wrapper > div.results-content > div.container.wide-listing > div.content > div.row.items-container > div.item-list.span6 > div > div.pagination.pagination-centered > ul > li')
-                total_pages = len(nav_list) - 2
+            properties = page_content.find_all('div', class_='listing-card')
 
             if len(properties) == 0:
                 break
 
             for prop in properties:
-                link = prop.find('a', class_='item-url')
-                title = link['title']
-                price_section = prop.find('p', class_='price')
-                if price_section is not None:
-                    title = title + ' ' + price_section.get_text().strip()
-                href = link['href']
-                internal_id = prop.find('a', class_='icon-fav')['data-property_id']
+                link = 'https://www.properati.com.ar' + prop.parent['href']
+                title = prop.find('div', class_= 'listing-card__title').get_text().strip()
+                price = prop.find('div', class_='price')
+                internal_id = prop['data-idanuncio']
+
+                if price:
+                    price = price.get_text().strip()
 
                 yield {
                     'title': title,
-                    'url': href,
+                    'url': link,
                     'internal_id': internal_id,
-                    'provider': self.provider_name
+                    'provider': self.provider_name,
+                    'price': price
                 }
 
             page += 1
-            page_link = self.provider_data['base_url'] + source + "/%s/" % page
+            page_link = self.provider_data['base_url'] + "/%s" % page + source
